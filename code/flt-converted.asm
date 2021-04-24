@@ -1,7 +1,3 @@
-;
-;   This version is optimized 
-;
-
 ;==========================================================
 ; main entry
 ;==========================================================
@@ -187,7 +183,7 @@ lc0f0
 ; set raster line for the (real) raster bars
 ;==========================================================
 
-            lda #$a9
+            lda #$98
             ldx #$00
 -
             cmp $d012                       ; raster line
@@ -203,7 +199,7 @@ draw_rasterbars
             beq -
             sty $d021                       ; background color
             inx
-            cpx #$17
+            cpx #$2a
             bne draw_rasterbars
 -
 
@@ -303,10 +299,15 @@ color_wash
 ;==========================================================
 
 raster_color
-!byte $02
+!byte $00, $00, $00, $00, $00, $00, $00, $00
+!byte $00, $00, $00, $00, $00, $00, $00, $02
 !byte $0a, $01, $01, $01, $0a, $0a, $02, $00
 !byte $00, $00, $00, $00, $00, $06, $0e, $0e
-!byte $01, $01, $0e, $0e, $06, $00
+!byte $01, $01, $0e, $0e, $06, $00, $00, $00
+!byte $00, $00, $00, $00, $00, $00, $00, $00
+!byte $00, $00, $00, $00, $00, $00, $00, $00
+!byte $00, $00, $00, $00, $00, $00, $57, $59
+
 
 ;==========================================================
 ; sinus table for the sprite rasterbar
@@ -437,7 +438,7 @@ lcc19
 lcc5e
             dec $0354
             beq +
-            rts               ; jmp lcd1d
+            jmp lcd1d
 +
             lda #$0a
             sta $0354
@@ -534,6 +535,9 @@ lccd1
             lda $0357
             ora $0363
             sta $d412                       ; voice 3 control register
+
+
+lcd1d
             rts
 
 
