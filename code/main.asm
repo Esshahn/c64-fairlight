@@ -9,7 +9,9 @@
 
 BASIC           = $0801
 CODE_START      = $c000
-
+SCREEN          = $c400
+SPRITE_POINTERS = SCREEN + $3f8
+CHARACTER       = $c800
 
 ;==========================================================
 ; BASIC header
