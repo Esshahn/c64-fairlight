@@ -3,9 +3,9 @@
 * = $c000
 
             sei
-            lda #$c1
+            lda # >lc174
             sta $0315                       ; IRQ vector routine high byte
-            lda #$74
+            lda # <lc174
             sta $0314                       ; IRQ vector routine low byte
             lda #$01
             sta $d012                       ; raster line
@@ -18,6 +18,11 @@
             sta $dd00                       ; CIA #2 - port A, serial bus access
             lda #$12
             sta $d018                       ; memory setup
+            
+;
+; set colors of the whole screen in color RAM
+;
+         
             lda #$09
             ldx #$00
 -
@@ -36,15 +41,23 @@
             sta $db00,x
             inx
             bne -
+
+
             lda #$00
             sta $d020                       ; border color
             sta $d021                       ; background color
+            
             lda #$0a
             sta $d023                       ; extra background color #2
             lda #$02
             sta $d022                       ; extra background color #1
             lda #$d8
             sta $d016                       ; screen control register #2, horizontal scroll, multicolor, screenwidth
+            
+;
+; Init all sprites and position them as one fake raster bar
+;
+            
             lda #$ff
             sta $d015                       ; sprite enable/disable
             lda #$18
@@ -66,6 +79,10 @@
             lda #$ff
             sta $d01c                       ; sprite multicolor mode
             sta $d01d                       ; sprite double width
+
+;
+; set all sprite colors
+;
             lda #$0d
             ldx #$07
 -
@@ -76,7 +93,9 @@
             sta $d025                       ; sprite extra color #1
             lda #$01
             sta $d026                       ; sprite extra color #2
-            lda #$00
+            
+            
+            lda #$00                        ; set address $02 to 0
             sta $02
             jsr lc200
             cli
@@ -228,11 +247,6 @@ lc18d
             jmp $fce2
 
 
-            ; probably trash and can be deleted once all code is relative
-            !for loop, 0, 91 {
-              brk         
-            }
-
 lc200
             jsr lcc19
             lda #$10
@@ -258,6 +272,8 @@ lc200
             sta $c6
             sta $c5
             rts
+
+* = $c22e 
 
 !byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $09, $07, $07, $01, $01, $01, $07, $07, $09, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 
@@ -285,7 +301,13 @@ lc2c0
 ;
 
 
-!byte $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $0f, $0f, $0f, $0f, $0f, $0f, $0f, $0f 
+; unused memory
+
+!fill 16, $20
+
+; sprite pointers 
+
+!byte $0f, $0f, $0f, $0f, $0f, $0f, $0f, $0f 
 
 ;
 ; character set
