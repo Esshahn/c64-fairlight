@@ -14,8 +14,9 @@
             sta $0315                       ; IRQ vector routine high byte
             lda # <irq
             sta $0314                       ; IRQ vector routine low byte
-            lda #$01
+            lda #$f
             sta $d012                       ; raster line
+            lda #$01
             sta $d01a                       ; interrupt control
             lda #$7f
             sta $dc0d                       ; CIA #1 - interrupt control and status
@@ -172,6 +173,7 @@ endless_loop
 irq
             lda #$01                        ; acknowlege IRQ
             sta $d019                       ; interrupt status
+            inc $d020
             lda set_volume +1               ; selfmod 
             cmp #$1f                        ; do not allow pressing space key before music is at full volume :)
             bne +
@@ -180,12 +182,16 @@ irq
             bne +                           ; pressed?
             jmp exit                        ; yes, exit intro
 +
+       
             jsr $ffe4                       ; GETIN
-
-            jsr music_play
-                      
+            
             inc $02                         
             ldx $02
+            cpx #table_sprite_y_pos_end - table_sprite_y_pos -1       ; end of sprite y pos table?
+            bne +
+            lda #$00
+            sta $02
++
             lda table_sprite_y_pos,x
             ldy #$0e                        ; $0e is double the amount of sprites
 -
@@ -194,24 +200,26 @@ irq
             dey
             bpl -
             lda $d001                       ; sprite #0 Y position
-            cmp #$32                        ; is our raster bar at the topmost position?
+            cmp #$31                        ; is our raster bar at the topmost position?
             bne +
             lda #$00                        ; then we change the 
 -
             sta $d01b                       ; sprite priority foreground/background
             jmp set_volume
 +
-            cmp #$7b                        ; is our raster bar at the bottom position?
+            cmp #$7c                        ; is our raster bar at the bottom position?
             bne +
             lda #$ff                        ; yes, so change priority foreground/background value again
-            jmp -
+            sta $d01b                       ; sprite priority foreground/background
+            jmp set_volume
+
 +
             cmp #$33
             bne set_volume
-            lda set_volume +1                    ; load volume
+            lda set_volume +1               ; load volume
             cmp #$1f                        ; is it loud enough already?
-            beq set_volume                       ; yes, move on
-            inc set_volume +1                    ; no, increase it
+            beq set_volume                  ; yes, move on
+            inc set_volume +1               ; no, increase it
 
 
 set_volume
@@ -222,6 +230,11 @@ set_volume
 ;==========================================================
 ; set raster line for the (real) raster bars
 ;==========================================================
+
+            lda #$a1                        ; start position of raster bars
+-
+            cmp $d012                       ; raster line
+            bne -
 
             lda #$a9                        ; start position of raster bars
             ldx #$00
@@ -294,7 +307,11 @@ color_cycle
             bne -                           ; no, keep going
             pla                             ; yes, get initial value from stack
             sta $db47                       ; put it at the end of the line
-            
+
+            ;jsr music_play
+
+
+dec $d020
             jmp $ea31                       ; KERNAL's standard interrupt routine
 
 
@@ -360,19 +377,12 @@ raster_color_end
 ;==========================================================
 
 table_sprite_y_pos
-!byte $57, $59, $5c, $5f, $61, $64, $66, $69, $6b, $6d, $6f, $71, $73, $75, $76, $78, $79, $7a, $7a, $7b
-!byte $7b, $7b, $7b, $7b, $7b, $7a, $79, $78, $77, $76, $74, $73, $71, $6f, $6d, $6a, $68, $65, $63, $60
-!byte $5e, $5b, $58, $56, $53, $50, $4e, $4b, $48, $46, $43, $41, $3f, $3d, $3b, $39, $38, $36, $35, $34
-!byte $33, $32, $32, $32, $32, $32, $32, $32, $33, $34, $35, $36, $38, $39, $3b, $3d, $3f, $41, $43, $46
+!byte $32, $32, $32, $31, $32, $32, $32, $32, $33, $34, $35, $36, $38, $39, $3b, $3d, $3f, $41, $43, $46
 !byte $48, $4b, $4e, $50, $53, $56, $58, $5b, $5e, $60, $63, $65, $68, $6a, $6d, $6f, $71, $73, $74, $76
-!byte $77, $78, $79, $7a, $7b, $7b, $7b, $7b, $7b, $7b, $7a, $7a, $79, $78, $76, $75, $73, $71, $6f, $6d
+!byte $77, $78, $79, $7a, $7b, $7b, $7b, $7c, $7b, $7b, $7b, $7a, $7a, $79, $78, $76, $75, $73, $71, $6f, $6d
 !byte $6b, $69, $66, $64, $61, $5f, $5c, $59, $57, $54, $51, $4e, $4c, $49, $47, $44, $42, $40, $3e, $3c
-!byte $3a, $38, $37, $35, $34, $33, $33, $32, $32, $32, $32, $32, $32, $33, $34, $35, $36, $37, $39, $3a
-!byte $3c, $3e, $40, $43, $45, $48, $4a, $4d, $4f, $52, $55, $57, $5a, $5d, $5f, $62, $65, $67, $6a, $6c
-!byte $6e, $70, $72, $74, $75, $77, $78, $79, $7a, $7b, $7b, $7b, $7b, $7b, $7b, $7b, $7a, $79, $78, $77
-!byte $75, $74, $72, $70, $6e, $6c, $6a, $67, $65, $62, $5f, $5d, $5a, $57, $55, $52, $4f, $4d, $4a, $48
-!byte $45, $43, $40, $3e, $3c, $3a, $39, $37, $36, $35, $34, $33, $32, $32, $32, $32, $32, $32, $33, $33
-!byte $34, $35, $37, $38, $3a, $3c, $3e, $40, $42, $44, $47, $49, $4c, $4e, $51, $54
+!byte $3a, $38, $37, $35, $34, $33, $33
+table_sprite_y_pos_end
 
 
 ;==========================================================
