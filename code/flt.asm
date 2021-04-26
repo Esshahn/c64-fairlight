@@ -172,61 +172,64 @@ endless_loop
 ; to get a reliable stable raster, code from this 
 ; excellent german article was used: 
 ; https://www.retro-programming.de/programming/nachschlagewerk/interrupts/der-rasterzeileninterrupt/raster-irq-endlich-stabil/
+; 
+; everything in here is only used to make sure the exact
+; needed amount of cycles are count so that the real
+; raster routine can be stable
 ;==========================================================
 
 irq
 
-            lda #<double_irq                ;(2 cycles) 2. Raster-IRQ einrichten
-            sta $0314                       ;(4 cycles)
-            lda #>double_irq                ;(2 cycles)
-            sta $0315                       ;(4 cycles)
-            tsx                             ;(2 cycles) Stackpointer im X-Reg. retten
-            stx double_irq+1                ;(4 cycles) und fürs zurückholen sichern!
-            nop                             ;(2 cycles)
-            nop                             ;(2 cycles)
-            nop                             ;(2 cycles)
-            lda #%00000001                  ;(2 cycles) 1. Raster-IRQ später bestätigen
-                                            ;------
-                                            ;26 cycles
+            lda #<double_irq                ; 2 cycles create 2nd raster irq
+            sta $0314                       ; 4 cycles
+            lda #>double_irq                ; 2 cycles
+            sta $0315                       ; 4 cycles
+            tsx                             ; 2 cycles 
+            stx double_irq+1                ; 4 cycles 
+            nop                             ; 2 cycles
+            nop                             ; 2 cycles
+            nop                             ; 2 cycles
+            lda #%00000001                  ; 2 cycles 
+                                            ; = 26 cycles
 
-            inc $d012                       ;(6 cycles) 2. IRQ in der übernächsten Zeile (22)!!!
-                                            ;       $d012 wurde bereits automatisch erhöht
-            sta $d019                       ;(4 cycles) IRQ bestätigen
-            cli                             ;(2 cycles) Interrupts für den 2. Raster-IRQ
-                                            ;       wieder freigeben
-
-            ldx #$08                        ;            2 cycles
+            inc $d012                       ; 6 cycles                  
+            sta $d019                       ; 4 cycles acknowledge irq
+            cli                             ; 2 cycles 
+                                
+            ldx #$08                        ; 2 cycles
 -
-            dex                             ;8 * 2 cycles = 16 cycles
-            bne -                           ;7 * 3 cycles = 21 cycles
-                                            ;1 * 2 cycles =  2 cycles
-                                            ;          ------
-                                            ;           41 cycles
-            nop                             ;2 cycles (56)
-            nop                             ;2 cycles (58)
-            nop                             ;2 cycles (60)
-            nop                             ;2 cycles (62)
-            nop                             ;2 cycles (64)
-            nop                             ;2 cycles (66)
+            dex                             ; 8 * 2 cycles = 16 cycles
+            bne -                           ; 7 * 3 cycles = 21 cycles
+                                            ; 1 * 2 cycles =  2 cycles
+                                            ; = 41 cycles
+            nop                             ; 2 cycles (56)
+            nop                             ; 2 cycles (58)
+            nop                             ; 2 cycles (60)
+            nop                             ; 2 cycles (62)
+            nop                             ; 2 cycles (64)
+            nop                             ; 2 cycles (66)
 
 double_irq
 
-            ldx #$00                        ;(2 cycles) Placycleshalter für 1. Stackpointer
-            txs                             ;(2 cycles) Stackpointer vom 1. IRQ wiederherstellen
-            nop                             ;(2 cycles)
-            nop                             ;(2 cycles)
-            nop                             ;(2 cycles)
-            nop                             ;(2 cycles)
-            bit $01                         ;(3 cycles)
-            ldx $d012                       ;(4 cycles)
-            lda #$01                        ;(2 cycles) weiß schonmal in den Akku
-            cpx $d012                       ;(4 cycles) sind wir noch in Rasterzeile 22?
-                                            ;------
-                                            ;25 cycles = 63 oder 64 cycles!!!
+            ldx #$00                        ; 2 cycles Placycleshalter für 1. Stackpointer
+            txs                             ; 2 cycles Stackpointer vom 1. IRQ wiederherstellen
+            nop                             ; 2 cycles
+            nop                             ; 2 cycles
+            nop                             ; 2 cycles
+            nop                             ; 2 cycles
+            nop                             ; 2 cycles
+            bit $01                         ; 3 cycles
+            ldx $d012                       ; 4 cycles
+            cpx $d012                       ; 4 cycles 
+                                            ; = 25 cycles = 63 or 64 cycles
             
-            beq main_irq                    ;(3 cycles) wenn JA einen lecyclesten Takt 'verschwenden'
-                                            ;(2 cycles) sonst einfach weiterlaufen...
+            beq main_irq                    ; 3 cycles waste 1 cycle or
+                                            ; 2 cycles just continue
  
+
+;==========================================================
+; the main raster routine
+;==========================================================
 
 main_irq
             lda #$a9                        ; start position of raster bars
@@ -292,7 +295,7 @@ set_volume
             
             
 ;==========================================================
-; set raster line for the (real) raster bars
+; set raster line for the scrolltext
 ;==========================================================
 
             lda #$d2                       ; raster line
@@ -320,19 +323,30 @@ set_volume
             inx                             ; x=x+1
             cpx #$27                        ; have we copied the full line already?
             bne -                           ; no, keep going
+-
             ldx #$00                        ; yes, x = 0
             lda ($39,x)                     ; fetch a new character
+
+            cmp #$00                        ; is the current byte = $00?
+            bne +                           ; yes, then reset the scrolltext
+
+            lda # >scrolltext               ; set high byte to start of scrolltext again
+            sta $3a
+            lda # <scrolltext               ; set low byte to start of scrolltext again
+            sta $39
+            jmp -                           ; and loop text
+            
++
             sta last_character              ; store it at the last character pos
             inc $39                         ; increase address position
             lda $39                         ; and read it
             cmp #$00                        ; is it 0?
             bne color_cycle                 ; no, jump to next section
             inc $3a                         ; yes, increase high byte of address position
-            lda $3a                         ; and load it
-            cmp # >scrolltext_end           ; is it $cc? (high byte of end of scrolltext)
-            bne color_cycle                 ; no, next section
-            lda # >scrolltext               ; yes, set high byte to start of scrolltext again
-            sta $3a
+            jmp color_cycle
+
+reset_scroller
+
 
 
 color_cycle
@@ -493,7 +507,8 @@ sprite_data
 
 scrolltext
 !scr "cracked on the 21st of november 1987...   now you can train yourself to kill communists and iranians...    latest top pirates : beastie boys  ikari  ace  hotline  danish gold  new wizax  tpi  tlc  antitrax  c64cg  triad  1001 crew  yeti  triton t  fcs  sca    overseas : eaglesoft  fbr  sol  nepa  abyss  xpb  ts  tih          pray that you will get an invitation to our great copy party in stockholm in december...        fuckings to watcher of the silents. you'll not destroy this party...       l8r           "
-scrolltext_end
+!byte $00
+
 
 ;==========================================================
 ; music player and data
