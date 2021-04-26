@@ -141,6 +141,30 @@ endless_loop
             jmp *                           ; endless loop, all code is done in IRQ routine
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ;==========================================================
 ; IRQ entrypoint
 ;==========================================================
@@ -149,31 +173,17 @@ irq
             lda #$01                        ; acknowlege IRQ
             sta $d019                       ; interrupt status
             lda set_volume +1               ; selfmod 
-            cmp #$1f
+            cmp #$1f                        ; do not allow pressing space key before music is at full volume :)
             bne +
             jsr $ffe4                       ; GETIN
             cmp #$20                        ; check for space key
-            beq exit                        ; pressed?
+            bne +                           ; pressed?
+            jmp exit                        ; yes, exit intro
 +
             jsr $ffe4                       ; GETIN
-            jmp irq_main
 
-
-exit
-            sei
-            lda #$ea                        ; $ea31 = original IRQ vector
-            sta $0315                       ; IRQ vector routine high byte
-            lda #$31
-            sta $0314                       ; IRQ vector routine low byte
-            jsr $ff81                       ; SCINIT
-            lda #$97
-            sta $dd00                       ; CIA #2 - port A, serial bus access
-            cli
-            jmp $fce2                       ; clean up IRQ and reset
-
-
-irq_main
             jsr music_play
+                      
             inc $02                         
             ldx $02
             lda table_sprite_y_pos,x
@@ -213,7 +223,7 @@ set_volume
 ; set raster line for the (real) raster bars
 ;==========================================================
 
-            lda #$a9
+            lda #$a9                        ; start position of raster bars
             ldx #$00
 -
             cmp $d012                       ; raster line
@@ -229,7 +239,7 @@ draw_rasterbars
             beq -
             sty $d021                       ; background color
             inx
-            cpx #$17
+            cpx #raster_color_end - raster_color
             bne draw_rasterbars
 
             lda #$d2                       ; raster line
@@ -284,8 +294,44 @@ color_cycle
             bne -                           ; no, keep going
             pla                             ; yes, get initial value from stack
             sta $db47                       ; put it at the end of the line
-
+            
             jmp $ea31                       ; KERNAL's standard interrupt routine
+
+
+exit
+            sei
+            lda #$ea                        ; $ea31 = original IRQ vector
+            sta $0315                       ; IRQ vector routine high byte
+            lda #$31
+            sta $0314                       ; IRQ vector routine low byte
+            jsr $ff81                       ; SCINIT
+            lda #$97
+            sta $dd00                       ; CIA #2 - port A, serial bus access
+            cli
+            jmp $fce2                       ; clean up IRQ and reset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ;==========================================================
@@ -302,9 +348,12 @@ color_wash
 ;==========================================================
 
 raster_color
-!byte $02, $0a, $01, $01, $01, $0a, $0a, $02, $00
-!byte $00, $00, $00, $00, $00, $06, $0e, $0e, $01
-!byte $01, $0e, $0e, $06, $00
+!byte $02
+!byte $0a, $01, $01, $01, $0a, $0a, $02, $00
+!byte $00, $00, $00, $00, $00, $06, $0e, $0e
+!byte $01, $01, $0e, $0e, $06, $00, $00, $00
+!byte $00, $00
+raster_color_end
 
 ;==========================================================
 ; sinus table for the sprite rasterbar
@@ -330,7 +379,7 @@ table_sprite_y_pos
 ; the sprite
 ;==========================================================
 
-* = $c3c0
+* = SPRITE_DATA
 sprite_data
 ; sprite data (why is it not called from anywhere)
 ; 3 bytes per horizontal line
