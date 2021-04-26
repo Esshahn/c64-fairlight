@@ -229,7 +229,7 @@ doubleIRQ
                                             ;(2 cycles) sonst einfach weiterlaufen...
  
 
-main_irw
+main_irq
             lda #$a9                        ; start position of raster bars
             ldx #$00
 -
@@ -265,14 +265,14 @@ draw_rasterbars
             dey
             bpl -
             lda $d001                       ; sprite #0 Y position
-            cmp #$31                        ; is our raster bar at the topmost position?
+            cmp #123                        ; is our raster bar at the topmost position?
             bne +
             lda #$00                        ; then we change the 
 -
             sta $d01b                       ; sprite priority foreground/background
             jmp set_volume
 +
-            cmp #$7c                        ; is our raster bar at the bottom position?
+            cmp #50                        ; is our raster bar at the bottom position?
             bne +
             lda #$ff                        ; yes, so change priority foreground/background value again
             sta $d01b                       ; sprite priority foreground/background
@@ -431,11 +431,7 @@ raster_color_end
 ;==========================================================
 
 table_sprite_y_pos
-!byte $32, $32, $32, $31, $32, $32, $32, $32, $33, $34, $35, $36, $38, $39, $3b, $3d, $3f, $41, $43, $46
-!byte $48, $4b, $4e, $50, $53, $56, $58, $5b, $5e, $60, $63, $65, $68, $6a, $6d, $6f, $71, $73, $74, $76
-!byte $77, $78, $79, $7a, $7b, $7b, $7b, $7c, $7b, $7b, $7b, $7a, $7a, $79, $78, $76, $75, $73, $71, $6f, $6d
-!byte $6b, $69, $66, $64, $61, $5f, $5c, $59, $57, $54, $51, $4e, $4c, $49, $47, $44, $42, $40, $3e, $3c
-!byte $3a, $38, $37, $35, $34, $33, $33
+!byte 87, 89, 92, 95, 97, 100, 102, 105, 107, 109, 111, 113, 115, 116, 118, 119, 120, 121, 122, 122, 123, 123, 123, 123, 122, 122, 121, 120, 119, 117, 116, 114, 112, 110, 108, 106, 103, 101, 98, 96, 93, 91, 88, 85, 82, 80, 77, 75, 72, 70, 67, 65, 63, 61, 59, 57, 56, 54, 53, 52, 51, 51, 50, 50, 50, 50, 51, 51, 52, 53, 54, 55, 57, 58, 60, 62, 64, 66, 68, 71, 73, 76, 78, 81, 84, 87
 table_sprite_y_pos_end
 
 
