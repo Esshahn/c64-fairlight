@@ -1,12 +1,13 @@
 ;
-;   This version is optimized 
+;   This version is slightly optimized in many areas, moving around code 
+;   where it makes sense. In addtion I added lots of comments
 ;
 
 ;==========================================================
 ; main entry
 ;==========================================================
 
-* = $c000
+* = CODE_START
 
             sei
             lda # >irq
@@ -30,27 +31,33 @@
 ; set colors of the whole screen in color RAM
 ;==========================================================
          
-            lda #$09
-            ldx #$00
+            lda #$09                        ; set color ram for the logo
+            ldx #$00                        ; x = 0
 -
-            sta $d800,x                     ; color RAM
-            inx
-            bne -
-            ldx #$20
+            sta $d800,x                     ; store 9 at $d800+x
+            inx                             ; x = x + 1
+            bne -                           ; loop until x wrapped to 0
+            ldx #$20                        ; x = 20
 -
-            sta $d900,x
+            sta $d900,x                     ; store 20 at $d900+x
+            dex                             ; x = x - 1
+            bne -                           ; loop until x = 0
+            lda #$01                        ; $01 = white
+-
+            sta $d920,x                     ; store 1 at $d920+x
+            sta $da00,x                     ; store 1 at $da00+x
+            sta $db00,x                     ; store 1 at $db00+x
+            inx                             ; x = x + 1
+            bne -                           ; loop until x = 0
+
+            ldx #$c0                        ; sets color of text over the raster bars to 
+            lda #$00                        ; $00 = black
+-
+            sta $da40,x
             dex
             bne -
-            lda #$01
--
-            sta $d920,x
-            sta $da00,x
-            sta $db00,x
-            inx
-            bne -
 
-
-            lda #$00
+            lda #$00                        
             sta $d020                       ; border color
             sta $d021                       ; background color
             
@@ -93,26 +100,45 @@
 ; set all sprite colors
 ;==========================================================
 
-            lda #$0d
-            ldx #$07
+            lda #$0d                        ; $0d = light green 
+            ldx #$07                        ; 0-7 sprites
 -
-            sta $d027,x                     ; sprite #0 color
+            sta $d027,x                     ; sprite color
             dex
-            bpl -
-            lda #$05
+            bpl -                           ; loop until all sprite colors have been set
+            lda #$05                        ; $05 = green
             sta $d025                       ; sprite extra color #1
-            lda #$01
+            lda #$01                        ; $01 = white
             sta $d026                       ; sprite extra color #2
             
-            
             lda #$00                        ; set address $02 to 0
-            sta $02
-            jsr lc200
+            sta $02                         ; which is the position of the sinus table for the sprite raster bar
+            
+            jsr music_init
+            lda #$10
+            sta set_volume +1               ; set the volume level 
+            
+            lda # >scrolltext               ; store the address of the scrolltext
+            sta $3a                         ; at zero page $39, $3a
+            lda # <scrolltext
+            sta $39
+
+            ldx #$00
+-
+            lda color_wash,x                ; writes the colory cycle effect into color RAM
+            sta $db20,x                    
+            inx
+            cpx #$28
+            bne -
+
+            lda #$00                        ; set $c5 and $c6 (keyboard matrix and buffer) to 0
+            sta $c6
+            sta $c5
             cli
 
 
 endless_loop
-            jmp *
+            jmp *                           ; endless loop, all code is done in IRQ routine
 
 
 ;==========================================================
@@ -122,7 +148,7 @@ endless_loop
 irq
             lda #$01                        ; acknowlege IRQ
             sta $d019                       ; interrupt status
-            lda lc0f0 +1                    ; selfmod 
+            lda set_volume +1               ; selfmod 
             cmp #$1f
             bne +
             jsr $ffe4                       ; GETIN
@@ -135,7 +161,7 @@ irq
 
 exit
             sei
-            lda #$ea
+            lda #$ea                        ; $ea31 = original IRQ vector
             sta $0315                       ; IRQ vector routine high byte
             lda #$31
             sta $0314                       ; IRQ vector routine low byte
@@ -147,38 +173,38 @@ exit
 
 
 irq_main
-            jsr lcc5e
-            inc $02
+            jsr music_play
+            inc $02                         
             ldx $02
             lda table_sprite_y_pos,x
-            ldy #$0e
+            ldy #$0e                        ; $0e is double the amount of sprites
 -
-            sta $d001,y                     ; sprite #0 Y position
-            dey
+            sta $d001,y                     ; but we skip every second address here with 2 deys
+            dey                             ; effectively only changing the y pos of each sprite - clever
             dey
             bpl -
             lda $d001                       ; sprite #0 Y position
-            cmp #$32
+            cmp #$32                        ; is our raster bar at the topmost position?
             bne +
-            lda #$00
+            lda #$00                        ; then we change the 
 -
             sta $d01b                       ; sprite priority foreground/background
-            jmp lc0f0
+            jmp set_volume
 +
-            cmp #$7b
+            cmp #$7b                        ; is our raster bar at the bottom position?
             bne +
-            lda #$ff
+            lda #$ff                        ; yes, so change priority foreground/background value again
             jmp -
 +
             cmp #$33
-            bne lc0f0
-            lda lc0f0 +1
-            cmp #$1f
-            beq lc0f0
-            inc lc0f0 +1
+            bne set_volume
+            lda set_volume +1                    ; load volume
+            cmp #$1f                        ; is it loud enough already?
+            beq set_volume                       ; yes, move on
+            inc set_volume +1                    ; no, increase it
 
 
-lc0f0
+set_volume
             lda #$1f
             sta $d418                       ; volume and filter modes
             
@@ -199,16 +225,16 @@ draw_rasterbars
             tay
             lda $d012                       ; raster line
 -
-            cmp $d012                       ; raster line
+            cmp $d012                       ; raster line     
             beq -
             sty $d021                       ; background color
             inx
             cpx #$17
             bne draw_rasterbars
--
 
-            lda $d012                       ; raster line
-            cmp #$d2
+            lda #$d2                       ; raster line
+-    
+            cmp $d012
             bne -
             lda $09
             sta $d016                       ; screen control register #2, horizontal scroll, multicolor, screenwidth
@@ -221,73 +247,45 @@ draw_rasterbars
             dec $09
             lda $09
             cmp #$ff
-            bne lc15c
+            bne color_cycle
             lda #$07
             sta $09
-            ldx #$00
+            ldx #$00                        ; x = 0
 -
-            lda lc721,x
-            sta lc720,x
-            inx
-            cpx #$27
-            bne -
-            ldx #$00
-            lda ($39,x)                   ; address of scrolltext
-            sta lc747
-            inc $39
-            lda $39
-            cmp #$00
-            bne lc15c
-            inc $3a
-            lda $3a
-            cmp #$cc
-            bne lc15c
-            lda #$ca
+            lda scrollline+1,x              ; get character at scrolline+1+x
+            sta scrollline,x                ; copy it to scrolline+x, moving it 1 char to the left
+            inx                             ; x=x+1
+            cpx #$27                        ; have we copied the full line already?
+            bne -                           ; no, keep going
+            ldx #$00                        ; yes, x = 0
+            lda ($39,x)                     ; fetch a new character
+            sta last_character              ; store it at the last character pos
+            inc $39                         ; increase address position
+            lda $39                         ; and read it
+            cmp #$00                        ; is it 0?
+            bne color_cycle                 ; no, jump to next section
+            inc $3a                         ; yes, increase high byte of address position
+            lda $3a                         ; and load it
+            cmp # >scrolltext_end           ; is it $cc? (high byte of end of scrolltext)
+            bne color_cycle                 ; no, next section
+            lda # >scrolltext               ; yes, set high byte to start of scrolltext again
             sta $3a
 
 
-lc15c
-            lda $db20
-            pha
-            ldx #$00
+color_cycle
+            lda $db20                       ; get color value at $db20
+            pha                             ; push it on the stack
+            ldx #$00                        ; x=0
 -
-            lda $db21,x
-            sta $db20,x
-            inx
-            cpx #$27
-            bne -
-            pla
-            sta $db47
+            lda $db21,x                     ; load color value at $db21+x
+            sta $db20,x                     ; save it at $db20+x
+            inx                             ; x=x+1
+            cpx #$27                        ; have cycled through a full line?
+            bne -                           ; no, keep going
+            pla                             ; yes, get initial value from stack
+            sta $db47                       ; put it at the end of the line
+
             jmp $ea31                       ; KERNAL's standard interrupt routine
-
-
-
-
-lc200
-            jsr lcc19
-            lda #$10
-            sta lc0f0 +1
-            ldx #$c0
-            lda #$00
--
-            sta $da40,x
-            dex
-            bne -
-            lda # >scrolltext
-            sta $3a
-            lda # <scrolltext
-            sta $39
-            ldx #$00
--
-            lda color_wash,x
-            sta $db20,x
-            inx
-            cpx #$28
-            bne -
-            lda #$00
-            sta $c6
-            sta $c5
-            rts
 
 
 ;==========================================================
@@ -295,7 +293,8 @@ lc200
 ;==========================================================
 
 color_wash
-!byte $01, $01, $01, $01, $01, $0f, $0f, $0f, $0f, $0f, $0c, $0c, $0c, $0c, $0c, $0b, $0b, $0b, $0b, $0b, $01, $01, $01, $01, $01, $0f, $0f, $0f, $0f, $0f, $0c, $0c, $0c, $0c, $0c, $0b, $0b, $0b, $0b, $0b
+!byte $01, $01, $01, $01, $01, $0f, $0f, $0f, $0f, $0f, $0c, $0c, $0c, $0c, $0c, $0b, $0b, $0b, $0b, $0b
+!byte $01, $01, $01, $01, $01, $0f, $0f, $0f, $0f, $0f, $0c, $0c, $0c, $0c, $0c, $0b, $0b, $0b, $0b, $0b
 
 
 ;==========================================================
@@ -303,17 +302,28 @@ color_wash
 ;==========================================================
 
 raster_color
-!byte $02
-!byte $0a, $01, $01, $01, $0a, $0a, $02, $00
-!byte $00, $00, $00, $00, $00, $06, $0e, $0e
-!byte $01, $01, $0e, $0e, $06, $00
+!byte $02, $0a, $01, $01, $01, $0a, $0a, $02, $00
+!byte $00, $00, $00, $00, $00, $06, $0e, $0e, $01
+!byte $01, $0e, $0e, $06, $00
 
 ;==========================================================
 ; sinus table for the sprite rasterbar
 ;==========================================================
 
 table_sprite_y_pos
-!byte $57, $59, $5c, $5f, $61, $64, $66, $69, $6b, $6d, $6f, $71, $73, $75, $76, $78, $79, $7a, $7a, $7b, $7b, $7b, $7b, $7b, $7b, $7a, $79, $78, $77, $76, $74, $73, $71, $6f, $6d, $6a, $68, $65, $63, $60, $5e, $5b, $58, $56, $53, $50, $4e, $4b, $48, $46, $43, $41, $3f, $3d, $3b, $39, $38, $36, $35, $34, $33, $32, $32, $32, $32, $32, $32, $32, $33, $34, $35, $36, $38, $39, $3b, $3d, $3f, $41, $43, $46, $48, $4b, $4e, $50, $53, $56, $58, $5b, $5e, $60, $63, $65, $68, $6a, $6d, $6f, $71, $73, $74, $76, $77, $78, $79, $7a, $7b, $7b, $7b, $7b, $7b, $7b, $7a, $7a, $79, $78, $76, $75, $73, $71, $6f, $6d, $6b, $69, $66, $64, $61, $5f, $5c, $59, $57, $54, $51, $4e, $4c, $49, $47, $44, $42, $40, $3e, $3c, $3a, $38, $37, $35, $34, $33, $33, $32, $32, $32, $32, $32, $32, $33, $34, $35, $36, $37, $39, $3a, $3c, $3e, $40, $43, $45, $48, $4a, $4d, $4f, $52, $55, $57, $5a, $5d, $5f, $62, $65, $67, $6a, $6c, $6e, $70, $72, $74, $75, $77, $78, $79, $7a, $7b, $7b, $7b, $7b, $7b, $7b, $7b, $7a, $79, $78, $77, $75, $74, $72, $70, $6e, $6c, $6a, $67, $65, $62, $5f, $5d, $5a, $57, $55, $52, $4f, $4d, $4a, $48, $45, $43, $40, $3e, $3c, $3a, $39, $37, $36, $35, $34, $33, $32, $32, $32, $32, $32, $32, $33, $33, $34, $35, $37, $38, $3a, $3c, $3e, $40, $42, $44, $47, $49, $4c, $4e, $51, $54
+!byte $57, $59, $5c, $5f, $61, $64, $66, $69, $6b, $6d, $6f, $71, $73, $75, $76, $78, $79, $7a, $7a, $7b
+!byte $7b, $7b, $7b, $7b, $7b, $7a, $79, $78, $77, $76, $74, $73, $71, $6f, $6d, $6a, $68, $65, $63, $60
+!byte $5e, $5b, $58, $56, $53, $50, $4e, $4b, $48, $46, $43, $41, $3f, $3d, $3b, $39, $38, $36, $35, $34
+!byte $33, $32, $32, $32, $32, $32, $32, $32, $33, $34, $35, $36, $38, $39, $3b, $3d, $3f, $41, $43, $46
+!byte $48, $4b, $4e, $50, $53, $56, $58, $5b, $5e, $60, $63, $65, $68, $6a, $6d, $6f, $71, $73, $74, $76
+!byte $77, $78, $79, $7a, $7b, $7b, $7b, $7b, $7b, $7b, $7a, $7a, $79, $78, $76, $75, $73, $71, $6f, $6d
+!byte $6b, $69, $66, $64, $61, $5f, $5c, $59, $57, $54, $51, $4e, $4c, $49, $47, $44, $42, $40, $3e, $3c
+!byte $3a, $38, $37, $35, $34, $33, $33, $32, $32, $32, $32, $32, $32, $33, $34, $35, $36, $37, $39, $3a
+!byte $3c, $3e, $40, $43, $45, $48, $4a, $4d, $4f, $52, $55, $57, $5a, $5d, $5f, $62, $65, $67, $6a, $6c
+!byte $6e, $70, $72, $74, $75, $77, $78, $79, $7a, $7b, $7b, $7b, $7b, $7b, $7b, $7b, $7a, $79, $78, $77
+!byte $75, $74, $72, $70, $6e, $6c, $6a, $67, $65, $62, $5f, $5d, $5a, $57, $55, $52, $4f, $4d, $4a, $48
+!byte $45, $43, $40, $3e, $3c, $3a, $39, $37, $36, $35, $34, $33, $32, $32, $32, $32, $32, $32, $33, $33
+!byte $34, $35, $37, $38, $3a, $3c, $3e, $40, $42, $44, $47, $49, $4c, $4e, $51, $54
 
 
 ;==========================================================
@@ -379,172 +389,10 @@ sprite_data
 
 scrolltext
 !scr "cracked on the 21st of november 1987...   now you can train yourself to kill communists and iranians...    latest top pirates : beastie boys  ikari  ace  hotline  danish gold  new wizax  tpi  tlc  antitrax  c64cg  triad  1001 crew  yeti  triton t  fcs  sca    overseas : eaglesoft  fbr  sol  nepa  abyss  xpb  ts  tih          pray that you will get an invitation to our great copy party in stockholm in december...        fuckings to watcher of the silents. you'll not destroy this party...       l8r           "
-
-
-;==========================================================
-; everything below seems to be audio related
-;==========================================================
-
-lcc00
-!byte $00, $00, $00, $08
-
-lcc04
-!byte $10, $2e, $4e, $00, $00, $00, $08
-
-lcc0b
-!byte $40, $8a, $0a, $00, $00, $00, $07
-
-lcc12
-!byte $40, $0a, $0a, $00, $7d, $d6, $1f
-
-lcc19
-            ldx #$18
--
-            lda lcc00,x
-            sta $d400,x                     ; voice 1 frequency low byte
-            dex
-            bpl -
-            lda lcc04
-            sta $0355
-            lda lcc0b
-            sta $0356
-            lda lcc12
-            sta $0357
-            ldx #$02
-            lda #$01
--
-            sta $0358,x
-            dex
-            bpl -
-            ldx #$08
-            lda #$00
--
-            sta $035b,x
-            dex
-            bpl -
-            lda #$01
-            sta $0354
-            ldx #$05
--
-            lda lce00,x
-            sta $0364,x
-            dex
-            bpl -
-            inc $0358
-            rts
-
-
-lcc5e
-            dec $0354
-            beq +
-            rts               ; jmp lcd1d
-+
-            lda #$0a
-            sta $0354
-            ldx #$02
-
-
-lcc6d
-            dec $0358,x
-            bne lccd1
-            txa
-            sta $9e
-            asl
-            pha
-            asl
-            asl
-            sec
-            sbc $9e
-            tay
-            lda $0355,x
-            sta $d404,y                     ; voice 1 control register
-            pla
-            tay
-
-
-lcc85
-            lda $0364,y
-            sta $9e
-            clc
-            adc #$03
-            sta $0364,y
-            lda $0365,y
-            sta $9f
-            adc #$00
-            sta $0365,y
-            ldy #$02
-            lda ($9e),y
-            beq lccc8
-            sta $035e,x
-            dey
-            lda ($9e),y
-            sta $035b,x
-            lda #$01
-            sta $0361,x
-
-
-lccae
-            dey
-            lda ($9e),y
-            sta $0358,x
-            bne lccd1
-            txa
-            asl
-            tay
-            lda lce00,y
-            sta $0364,y
-            lda lce01,y
-            sta $0365,y
-            jmp lcc85
-
-
-lccc8
-            dey
-            lda #$00
-            sta $0361,x
-            jmp lccae
-
-
-lccd1
-            dex
-            bpl lcc6d
-            lda $a0
-            and #$07
-            clc
-            adc #$04
-            sta $d40a                       ; voice 2 pulse width high byte
-            lda $035b
-            sta $d400                       ; voice 1 frequency low byte
-            lda $035e
-            sta $d401                       ; voice 1 frequency high byte
-            lda $035c
-            sta $d407                       ; voice 2 frequency low byte
-            lda $035f
-            sta $d408                       ; voice 2 frequency high byte
-            lda $035d
-            sta $d40e                       ; voice 3 frequency low byte
-            lda $0360
-            sta $d40f                       ; voice 3 frequency high byte
-            lda $0355
-            ora $0361
-            sta $d404                       ; voice 1 control register
-            lda $0356
-            ora $0362
-            sta $d40b                       ; voice 2 control register
-            lda $0357
-            ora $0363
-            sta $d412                       ; voice 3 control register
-            rts
-
-
-!align 255, 0
+scrolltext_end
 
 ;==========================================================
-; I think this is the music, not sure yet
+; music player and data
 ;==========================================================
 
-lce00
-!byte $57
-
-lce01
-!byte $ce, $06, $ce, $57, $ce, $03, $85, $06, $03, $e2, $04, $06, $2c, $05, $03, $cf, $05, $03, $cf, $05, $06, $85, $06, $03, $85, $06, $03, $e2, $04, $06, $2c, $05, $03, $cf, $05, $03, $cf, $05, $06, $85, $06, $03, $85, $06, $02, $85, $06, $01, $0a, $0d, $06, $2c, $05, $03, $cf, $05, $02, $e2, $04, $01, $cf, $05, $06, $85, $06, $03, $85, $06, $03, $e2, $04, $06, $2c, $05, $03, $cf, $05, $03, $e2, $04, $06, $42, $03, $00, $00, $00, $60, $00, $00, $03, $29, $34, $01, $8c, $3a, $01, $08, $3e, $01, $29, $34, $04, $a1, $45, $02, $08, $3e, $01, $8d, $3a, $01, $08, $3e, $04, $8d, $3a, $06, $29, $34, $03, $29, $34, $01, $8d, $3a, $01, $08, $3e, $01, $29, $34, $04, $a1, $45, $02, $08, $3e, $01, $8c, $3a, $01, $08, $3e, $04, $a1, $45, $06, $27, $4e, $03, $27, $4e, $01, $cd, $52, $01, $27, $4e, $01, $cd, $52, $04, $27, $4e, $02, $a1, $45, $01, $08, $3e, $01, $a1, $45, $04, $8d, $3a, $06, $29, $34, $03, $29, $34, $01, $8d, $3a, $01, $08, $3e, $01, $29, $34, $04, $a1, $45, $02, $08, $3e, $01, $8c, $3a, $01, $08, $3e, $02, $8c, $3a, $02, $78, $2e, $06, $29, $34, $02, $0a, $0d, $02, $0a, $0d, $01, $a3, $0e, $01, $82, $0f, $04, $b3, $14, $02, $89, $13, $02, $68, $11, $02, $82, $0f, $02, $a3, $0e, $03, $82, $0f, $01, $68, $11, $02, $a3, $0e, $02, $0a, $0d, $02, $0a, $0d, $01, $a3, $0e, $01, $82, $0f, $02, $b3, $14, $02, $89, $13, $02, $68, $11, $02, $82, $0f, $02, $a3, $0e, $02, $82, $0f, $06, $c4, $09, $02, $0a, $0d, $02, $a3, $0e, $02, $82, $0f, $02, $b3, $14, $02, $89, $13, $02, $68, $11, $02, $82, $0f, $02, $a3, $0e, $02, $82, $0f, $06, $82, $0f, $02, $0a, $0d, $02, $0a, $0d, $01, $a3, $0e, $01, $82, $0f, $02, $b3, $14, $02, $b3, $14, $02, $89, $13, $02, $68, $11, $02, $82, $0f, $01, $a3, $0e, $01, $82, $0f, $06, $0a, $0d, $06, $0a, $0d, $09, $82, $0f, $03, $a3, $0e, $06, $0a, $0d, $06, $13, $27, $09, $d0, $22, $03, $04, $1f, $06, $14, $1a, $03, $14, $1a, $02, $14, $1a, $01, $13, $27, $06, $66, $29, $03, $d0, $22, $02, $04, $1f, $01, $46, $1d, $06, $14, $1a, $03, $14, $1a, $03, $8a, $13, $06, $b3, $14, $04, $04, $1f, $05, $d0, $22, $03, $14, $1a, $00, $00, $00, $20, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+!source "code/music.asm"
