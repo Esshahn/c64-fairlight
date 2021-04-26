@@ -20,7 +20,6 @@
             sta $d01a                       ; interrupt control
             lda #$7f
             sta $dc0d                       ; CIA #1 - interrupt control and status
-            sta $dd0d                       ; CIA #1 - interrupt control and status
             lda #$1b
             sta $d011                       ; screen control register #1, vertical scroll
             lda #$94
@@ -177,12 +176,12 @@ endless_loop
 
 irq
 
-            lda #<doubleIRQ                 ;(2 cycles) 2. Raster-IRQ einrichten
+            lda #<double_irq                ;(2 cycles) 2. Raster-IRQ einrichten
             sta $0314                       ;(4 cycles)
-            lda #>doubleIRQ                 ;(2 cycles)
+            lda #>double_irq                ;(2 cycles)
             sta $0315                       ;(4 cycles)
             tsx                             ;(2 cycles) Stackpointer im X-Reg. retten
-            stx doubleIRQ+1                 ;(4 cycles) und fürs zurückholen sichern!
+            stx double_irq+1                ;(4 cycles) und fürs zurückholen sichern!
             nop                             ;(2 cycles)
             nop                             ;(2 cycles)
             nop                             ;(2 cycles)
@@ -210,7 +209,7 @@ irq
             nop                             ;2 cycles (64)
             nop                             ;2 cycles (66)
 
-doubleIRQ
+double_irq
 
             ldx #$00                        ;(2 cycles) Placycleshalter für 1. Stackpointer
             txs                             ;(2 cycles) Stackpointer vom 1. IRQ wiederherstellen
@@ -225,7 +224,7 @@ doubleIRQ
                                             ;------
                                             ;25 cycles = 63 oder 64 cycles!!!
             
-            beq main_irq                  ;(3 cycles) wenn JA einen lecyclesten Takt 'verschwenden'
+            beq main_irq                    ;(3 cycles) wenn JA einen lecyclesten Takt 'verschwenden'
                                             ;(2 cycles) sonst einfach weiterlaufen...
  
 
@@ -265,14 +264,14 @@ draw_rasterbars
             dey
             bpl -
             lda $d001                       ; sprite #0 Y position
-            cmp #123                        ; is our raster bar at the topmost position?
+            cmp #50                         ; is our raster bar at the topmost position?
             bne +
             lda #$00                        ; then we change the 
 -
             sta $d01b                       ; sprite priority foreground/background
             jmp set_volume
 +
-            cmp #50                        ; is our raster bar at the bottom position?
+            cmp #123                        ; is our raster bar at the bottom position?
             bne +
             lda #$ff                        ; yes, so change priority foreground/background value again
             sta $d01b                       ; sprite priority foreground/background
@@ -295,10 +294,6 @@ set_volume
 ;==========================================================
 ; set raster line for the (real) raster bars
 ;==========================================================
-
-
-
- 
 
             lda #$d2                       ; raster line
 -    
