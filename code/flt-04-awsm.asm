@@ -62,7 +62,7 @@
             sta $d020                       ; border color
             sta $d021                       ; background color
             
-            lda #$0a
+            lda #$07
             sta $d023                       ; extra background color #2
             lda #$02
             sta $d022                       ; extra background color #1
@@ -101,15 +101,15 @@
 ; set all sprite colors
 ;==========================================================
 
-            lda #$0d                        ; $0d = light green 
+            lda #$0e                        ; $0d = light green 
             ldx #$07                        ; 0-7 sprites
 -
             sta $d027,x                     ; sprite color
             dex
             bpl -                           ; loop until all sprite colors have been set
-            lda #$05                        ; $05 = green
+            lda #$06                        ; $05 = green
             sta $d025                       ; sprite extra color #1
-            lda #$01                        ; $01 = white
+            lda #$03                        ; $01 = white
             sta $d026                       ; sprite extra color #2
             
             lda #$00                        ; set address $02 to 0
@@ -387,11 +387,10 @@ color_wash
 ;==========================================================
 
 raster_color
-!byte $02
-!byte $0a, $01, $01, $01, $0a, $0a, $02, $00
-!byte $00, $00, $00, $00, $00, $06, $0e, $0e
-!byte $01, $01, $0e, $0e, $06, $00, $00, $00
-!byte $00, $00
+!byte $09, $08, $07, $01, $07, $08, $08, $09
+!byte $00, $00, $00, $00, $00, $00
+!byte $06, $0e, $03, $01, $03, $0e, $0e, $06
+!byte $00
 raster_color_end
 
 ;==========================================================
@@ -472,5 +471,5 @@ scrolltext
 ;==========================================================
 ; music player and data
 ;==========================================================
-* = $cc01
+* = MUSIC
 !source "code/music.asm"
