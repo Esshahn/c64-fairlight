@@ -465,12 +465,12 @@ sprite_data
 ;==========================================================
 
 scrolltext
-!scr "cracked on the 21st of november 1987...   now you can train yourself to kill communists and iranians...    latest top pirates : beastie boys  ikari  ace  hotline  danish gold  new wizax  tpi  tlc  antitrax  c64cg  triad  1001 crew  yeti  triton t  fcs  sca    overseas : eaglesoft  fbr  sol  nepa  abyss  xpb  ts  tih          pray that you will get an invitation to our great copy party in stockholm in december...        fuckings to watcher of the silents. you'll not destroy this party...       l8r           "
+!scr "disassembled by awsm of mayday during many boring evenings of the covid 19 lockdown in 2021... check out my github account for the fully commented source code at   https://github.com/esshahn/c64-fairlight   greetings go out to... drumroll... fairlight   see you next time...         "
 !byte $00
 
 
 ;==========================================================
 ; music player and data
 ;==========================================================
-
+* = $cc01
 !source "code/music.asm"
