@@ -27,7 +27,6 @@
             lda #$12
             sta $d018                       ; memory setup
   
-            
 
 ;==========================================================
 ; set colors of the whole screen in color RAM
@@ -141,26 +140,6 @@
 
 endless_loop
             jmp *                           ; endless loop, all code is done in IRQ routine
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -345,9 +324,6 @@ set_volume
             inc $3a                         ; yes, increase high byte of address position
             jmp color_cycle
 
-reset_scroller
-
-
 
 color_cycle
             lda $db20                       ; get color value at $db20
@@ -389,23 +365,6 @@ exit
             sta $dd00                       ; CIA #2 - port A, serial bus access
             cli
             jmp $fce2                       ; clean up IRQ and reset
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -481,7 +440,7 @@ sprite_data
 ;==========================================================
 
 * = SCREEN
-!source "code/screen-text.asm"
+!source "code/screen-text-awsm.asm"
 
 
 ;==========================================================

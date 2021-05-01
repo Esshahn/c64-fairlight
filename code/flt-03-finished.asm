@@ -8,7 +8,6 @@
 ;==========================================================
 
 * = CODE_START
-
             sei
             lda # >irq
             sta $0315                       ; IRQ vector routine high byte
@@ -28,7 +27,6 @@
             sta $d018                       ; memory setup
   
             
-
 ;==========================================================
 ; set colors of the whole screen in color RAM
 ;==========================================================
@@ -146,27 +144,6 @@ endless_loop
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ;==========================================================
 ; IRQ entrypoint
 ; to get a reliable stable raster, code from this 
@@ -179,7 +156,6 @@ endless_loop
 ;==========================================================
 
 irq
-
             lda #<double_irq                ; 2 cycles create 2nd raster irq
             sta $0314                       ; 4 cycles
             lda #>double_irq                ; 2 cycles
@@ -209,8 +185,8 @@ irq
             nop                             ; 2 cycles (64)
             nop                             ; 2 cycles (66)
 
-double_irq
 
+double_irq
             ldx #$00                        ; 2 cycles Placycleshalter für 1. Stackpointer
             txs                             ; 2 cycles Stackpointer vom 1. IRQ wiederherstellen
             nop                             ; 2 cycles
@@ -345,9 +321,6 @@ set_volume
             inc $3a                         ; yes, increase high byte of address position
             jmp color_cycle
 
-reset_scroller
-
-
 
 color_cycle
             lda $db20                       ; get color value at $db20
@@ -389,26 +362,6 @@ exit
             sta $dd00                       ; CIA #2 - port A, serial bus access
             cli
             jmp $fce2                       ; clean up IRQ and reset
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
