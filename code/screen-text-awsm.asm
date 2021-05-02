@@ -41,10 +41,10 @@ scrollline
 last_character
 !byte $20
 
-!fill 88, $20
+!fill 89, $20
 
 !scr "intro by woodo & awsm"
 
-!fill 51, $20
+!fill 50, $20
 
 ; end of screen area
