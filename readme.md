@@ -1,10 +1,12 @@
-# The Fairlight Intro 
+# The Fairlight C64 Intro 
 
 The dissassembled source code of the iconic C64 intro.  
 Read all about the process of unpacking and disassembly in [my blog](https://www.awsm.de/blog/)
 
 [Fairlight Intro Unpacking](https://www.awsm.de/blog/fairlight-unpacking/)  
 [Fairlight Intro Disassembly](https://www.awsm.de/blog/fairlight-disassembly/)
+
+If you're unfamiliar with the intro, [go check it out on youtube](https://youtu.be/WnYCERvc2B8?t=17).
 
 ## Files
 
