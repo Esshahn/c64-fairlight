@@ -6,7 +6,7 @@
         {
             "label": "build -> C64 -> VICE",
             "type": "shell",
-            "osx": { "command": "./make.sh" },
+            "osx": { "command": "./make.sh -d64 -f fairlight" },
             "group": { "kind": "build", "isDefault": true },
             "problemMatcher": {
                 "owner": "acme",

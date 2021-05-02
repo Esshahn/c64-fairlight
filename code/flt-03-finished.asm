@@ -335,6 +335,9 @@ color_cycle
             pla                             ; yes, get initial value from stack
             sta $db47                       ; put it at the end of the line
 
+            jsr music_play
+            asl $d019                       ; acknowlege IRQ interrupt status
+
             lda set_volume +1               ; selfmod 
             cmp #$1f                        ; do not allow pressing space key before music is at full volume :)
             bne +
@@ -344,10 +347,6 @@ color_cycle
             jmp exit                        ; yes, exit intro
 +
             jsr $ffe4                       ; GETIN
-
-          
-            jsr music_play
-            asl $d019                       ; acknowlege IRQ interrupt status
             jmp $ea31                       ; KERNAL's standard interrupt routine
 
 
