@@ -222,14 +222,14 @@ draw_rasterbars
             sta $09
             ldx #$00
 -
-            lda lc721,x
-            sta lc720,x
+            lda scrollline+1,x
+            sta scrollline,x
             inx
             cpx #$27
             bne -
             ldx #$00
             lda ($39,x)                   ; address of scrolltext
-            sta lc747
+            sta last_character
             inc $39
             lda $39
             cmp #$00

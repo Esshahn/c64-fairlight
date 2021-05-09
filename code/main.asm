@@ -36,5 +36,8 @@ MUSIC           = $cc00
 ; main program
 ;==========================================================
 
+;!source "code/flt-01-converted.asm"
+;!source "code/flt-02-cleaned.asm"
+;!source "code/flt-03-finished.asm"
 !source "code/flt-04-awsm.asm"
 
