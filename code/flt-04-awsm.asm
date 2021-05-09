@@ -78,20 +78,20 @@
             sta $d015                       ; sprite enable/disable
             lda #$18
             sta $d000                       ; sprite #0 X position (bits 0-7)
-            lda #$48
+            lda #$18 + 1*48
             sta $d002                       ; sprite #1 X position (bits 0-7)
-            lda #$78
+            lda #$18 + 2*48
             sta $d004                       ; sprite #2 X position (bits 0-7)
-            lda #$a8
+            lda #$18 + 3*48
+            sta $d006                       ; sprite #3 X position (bits 0-7)
+            lda #$18 + 4*48
             sta $d008                       ; sprite #4 X position (bits 0-7)
-            lda #$d8
-            sta $d00a                       ; sprite #5 X position (bits 0-7)
             lda #$08
+            sta $d00a                       ; sprite #5 X position (bits 0-7)
+            lda #$08 + 1*48
             sta $d00c                       ; sprite #6 X position (bits 0-7)
-            lda #$38
-            sta $d00e                       ; sprite #7 X position (bits 0-7)
-            lda #$c0
-            sta $d010                       ; sprites 0-7 X position (bit 8)
+            lda #$60
+            sta $d010                       ; sprites 5+6 X position (bit 8)
             lda #$ff
             sta $d01c                       ; sprite multicolor mode
             sta $d01d                       ; sprite double width
@@ -102,7 +102,7 @@
 ;==========================================================
 
             lda #$0e                        ; $0d = light green 
-            ldx #$07                        ; 0-7 sprites
+            ldx #$06                        ; 0-7 sprites
 -
             sta $d027,x                     ; sprite color
             dex
